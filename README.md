@@ -161,19 +161,19 @@ The following screenshots showcase the AI TruthTrail interface and examples of i
 
 ### 🏠 Homepage
 
-![AI TruthTrail Homepage](screenshots/homepage.png)
+![AI TruthTrail Homepage](screenshots/homepage.png.png)
 
 *Follow the story behind a claim.*
 
 ### 🔍 Compare Claims
 
-![AI TruthTrail Compare Claims](screenshots/compare.png)
+![AI TruthTrail Compare Claims](screenshots/compare.png.png)
 
 The comparison interface displays semantic similarity and potential differences between two versions of a statement.
 
 ### 📰 TruthBrief — Summarization
 
-![AI TruthTrail TruthBrief](screenshots/truthbrief.png)
+![AI TruthTrail TruthBrief](screenshots/truthbrief.png.png)
 
 The summarization interface presents key sentences alongside a quick extractive summary.
 
