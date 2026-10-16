@@ -1,0 +1,10 @@
+[
+    {
+        "claim_id": "CLAIM001",
+        "version": 1,
+        "claim_text": "Solar energy capacity increased in 2025.",
+        "source": "Example News",
+        "notes": "First version",
+        "recorded_at": "2026-10-15T05:42:26.136045+00:00"
+    }
+]

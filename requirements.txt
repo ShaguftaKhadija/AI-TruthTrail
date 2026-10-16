@@ -1,0 +1,6 @@
+Flask
+requests
+python-dotenv
+sentence-transformers
+Pillow
+pytesseract

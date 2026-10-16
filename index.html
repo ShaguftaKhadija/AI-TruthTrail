@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="AI TruthTrail helps readers explore how claims change, lose context, and travel between sources.">
+  <title>AI TruthTrail | Follow the story behind a claim</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+
+  <style>
+    :root{--ink:#17243b;--muted:#68758c;--blue:#3567dc;--blue-dark:#244eb9;--line:#e4e9f3;--paper:#fff;--soft:#f5f7fc;--lav:#f0f1ff;--mint:#e8f8f1;--peach:#fff1e9;--shadow:0 18px 50px rgba(34,53,94,.09)}
+    *{box-sizing:border-box}
+    body{margin:0;background:#fbfcff;color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}
+    button,input,textarea,select{font:inherit}
+    button{cursor:pointer}
+    .navbar{position:sticky;top:0;z-index:30;display:flex;align-items:center;justify-content:space-between;gap:22px;padding:15px clamp(18px,5vw,72px);background:rgba(255,255,255,.94);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+    .logo{display:flex;align-items:center;gap:10px;font-size:1.1rem;font-weight:800;white-space:nowrap;color:var(--ink)}
+    .logo-icon{display:grid;place-items:center;width:37px;height:37px;border-radius:12px;background:#eaf0ff;color:var(--blue);font-size:1.55rem}
+    .navbar nav{display:flex;align-items:center;justify-content:center;gap:clamp(10px,2vw,25px);flex-wrap:wrap}
+    .navbar nav a{color:#58657a;text-decoration:none;font-size:.91rem;font-weight:650;padding:9px 0}
+    .navbar nav a:hover{color:var(--blue)}
+    .get-started,.primary-btn,.secondary-btn{border:0;border-radius:12px;padding:12px 18px;font-weight:750;transition:transform .18s,background .18s}
+    .get-started,.primary-btn{background:var(--blue);color:white;box-shadow:0 8px 18px #3567dc25}
+    .get-started:hover,.primary-btn:hover{background:var(--blue-dark);transform:translateY(-1px)}
+    .secondary-btn{background:#eef2ff;color:#2f53bd}
+    .page{display:none;min-height:70vh}
+    .page.active{display:block}
+    .tt-wrap{width:min(1180px,calc(100% - 40px));margin:auto}
+    .tt-hero{display:grid;grid-template-columns:1.02fr .98fr;align-items:center;gap:clamp(30px,5vw,72px);padding:70px 0 54px}
+    .eyebrow,.badge{display:inline-flex;align-items:center;gap:8px;border-radius:999px;background:#edf2ff;color:#385ac1;padding:8px 12px;font-size:.78rem;font-weight:800;letter-spacing:.02em}
+    .tt-hero h1{font-size:clamp(2.7rem,5.5vw,5rem);line-height:1.02;letter-spacing:-.055em;margin:22px 0 20px;max-width:720px}
+    .tt-hero h1 span{display:block;color:var(--blue)}
+    .tt-hero p{font-size:1.08rem;line-height:1.8;color:var(--muted);max-width:600px}
+    .hero-buttons{display:flex;gap:12px;flex-wrap:wrap;margin-top:25px}
+    .tt-hero-art{position:relative;min-height:370px;border-radius:32px;background:linear-gradient(140deg,#edf2ff,#f7f2ff 62%,#e9f8f3);border:1px solid #e5eafa;overflow:hidden;padding:28px;display:grid;place-items:center}
+    .art-orb{position:absolute;width:220px;height:220px;border-radius:50%;background:#dce5ff;right:-40px;top:-45px;opacity:.8}
+    .art-orb.two{width:130px;height:130px;left:-25px;bottom:-25px;background:#d8f4e8}
+    .art-document{position:relative;z-index:1;width:min(330px,90%);padding:23px;border:1px solid #e2e8f5;border-radius:22px;background:#fff;box-shadow:0 24px 60px #243c7a1b;transform:rotate(-3deg)}
+    .art-document-top{display:flex;justify-content:space-between;align-items:center;font-size:.72rem;font-weight:850;letter-spacing:.09em;color:#5368bb}
+    .art-document h3{font-size:1.2rem;margin:20px 0 14px}
+    .art-line{height:9px;border-radius:99px;background:#e9edf6;margin:10px 0;width:100%}.art-line.short{width:65%}.art-line.mid{width:82%}
+    .art-highlight{height:34px;border-radius:10px;background:#e9f8f0;border:1px solid #cbeedb;margin-top:18px}
+    .art-float{position:absolute;z-index:2;background:white;border:1px solid #e6eaf3;border-radius:14px;padding:13px 15px;box-shadow:0 12px 30px #26395d1c;font-size:.82rem}
+    .art-float strong,.art-float small{display:block}.art-float small{margin-top:5px;color:var(--muted)}.art-float.one{left:12px;top:55px}.art-float.two{right:10px;bottom:48px}
+    .section-intro{text-align:center;max-width:760px;margin:25px auto 30px}.section-intro h2{font-size:clamp(1.8rem,3.4vw,2.65rem);letter-spacing:-.035em;margin:13px 0}.section-intro p{color:var(--muted);line-height:1.75}
+    .tt-feature-section{padding:26px 0 76px}
+    .tt-feature-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
+    .tt-feature-card{position:relative;text-align:left;width:100%;padding:26px;border:1px solid var(--line);border-radius:22px;background:#fff;box-shadow:0 9px 30px #26395d08;transition:transform .2s,box-shadow .2s,border-color .2s}
+    .tt-feature-card:hover{transform:translateY(-4px);box-shadow:var(--shadow);border-color:#cad5f6}
+    .tt-feature-icon{display:grid;place-items:center;width:48px;height:48px;border-radius:15px;background:#edf2ff;color:var(--blue);font-size:1.45rem;font-weight:800}
+    .tt-feature-card:nth-child(2) .tt-feature-icon{background:#fff1e8;color:#bd663d}
+    .tt-feature-card:nth-child(3) .tt-feature-icon{background:#e8f8f1;color:#27845e}
+    .tt-feature-card:nth-child(4) .tt-feature-icon{background:#f2eaff;color:#8152c4}
+    .tt-feature-card h3{font-size:1.24rem;margin:18px 0 9px}.tt-feature-card p{color:var(--muted);line-height:1.7;margin:0 0 20px;max-width:520px}
+    .tt-feature-foot{display:flex;justify-content:space-between;align-items:center;color:#3558c2;font-weight:800;font-size:.9rem}
+    .status-note{font-size:.72rem!important;font-weight:750!important;letter-spacing:.02em;text-transform:uppercase;color:#7b879c!important;margin:0!important}
+    .tt-existing-tools{padding:34px 0 64px;border-top:1px solid var(--line)}
+    .tool-links{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+    .tool-links button{border:1px solid var(--line);background:white;color:#4d5c73;border-radius:999px;padding:11px 16px;font-weight:700}
+    .tool-links button:hover{border-color:#bdcafa;color:var(--blue)}
+    .page-heading{padding:52px 20px 26px;text-align:center;max-width:900px;margin:auto}
+    .page-heading h1{font-size:clamp(2rem,4vw,3.5rem);letter-spacing:-.04em;margin:15px 0 10px}
+    .page-heading p{color:var(--muted);line-height:1.7;margin:0}
+    .tt-panel{width:min(1080px,calc(100% - 40px));margin:0 auto 60px;background:#fff;border:1px solid var(--line);border-radius:24px;padding:clamp(18px,3vw,34px);box-shadow:0 12px 36px #26395d08}
+    .tt-grid-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+    .claim-box,.ocr-card,.text-card,.brief-box,.similarity,.changes{background:#fff;border:1px solid var(--line);border-radius:17px;padding:20px;min-width:0}
+    label{display:block;font-weight:800;margin-bottom:10px}
+    textarea,input[type="text"],input[type="search"],select{width:100%;border:1px solid #dfe5ef;border-radius:12px;background:#fbfcff;padding:14px;color:var(--ink);outline:none}
+    textarea{min-height:135px;resize:vertical;line-height:1.65}
+    textarea:focus,input:focus,select:focus{border-color:#8299ef;box-shadow:0 0 0 3px #eaf0ff}
+    .form-help,.tt-muted{color:var(--muted);font-size:.9rem;line-height:1.65}
+    .swap-box{text-align:center;align-self:center;font-size:1.6rem;color:#8291ac}
+    .analyze-btn{display:block;margin:20px auto 0;min-width:180px}
+    .analysis{margin-top:28px;padding:20px;border-radius:18px;background:var(--soft);border:1px solid var(--line)}
+    .analysis.hidden,.brief-result.hidden{display:none}
+    .result-grid{display:grid;grid-template-columns:.8fr 1.2fr;gap:18px}
+    .similarity{text-align:center}.circle{width:110px;height:110px;border:9px solid #dfe7ff;border-top-color:var(--blue);border-radius:50%;display:grid;place-items:center;margin:10px auto 18px;font-size:1.35rem;font-weight:850}
+    .changes{text-align:left}.hidden{display:none!important}
+    .ocr-notice,.notice{width:min(1080px,calc(100% - 40px));margin:0 auto 22px;padding:16px 18px;border-radius:14px;background:#f1f5ff;color:#53627b;line-height:1.7}
+    .ocr-grid{width:min(1080px,calc(100% - 40px));margin:0 auto;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
+    .ocr-card h2{margin-top:0}.ocr-card input[type=file]{display:block;max-width:100%;margin:10px 0 15px}.ocr-preview{display:block;width:100%;max-height:260px;object-fit:contain;border-radius:12px;background:#f4f6fb;margin:12px 0}.ocr-text{min-height:125px}.ocr-button{margin:12px 0 0}.ocr-status{min-height:22px;color:#5268b5;font-size:.86rem;overflow-wrap:anywhere}.ocr-next{width:min(1080px,calc(100% - 40px));margin:22px auto 60px;text-align:center;padding:26px;border:1px solid var(--line);border-radius:20px;background:#fff}
+    .news-explorer{width:min(1080px,calc(100% - 40px));margin:0 auto 35px;padding:24px;border:1px solid var(--line);border-radius:20px;background:#fff}.news-search-form{display:flex;gap:10px}.news-search-form input{flex:1;min-width:0}.timeline-history-heading{width:min(1080px,calc(100% - 40px));margin:30px auto 16px}.timeline{width:min(1080px,calc(100% - 40px));margin:0 auto 60px}.timeline-item{display:flex;gap:15px;margin:16px 0}.number{display:grid;place-items:center;flex:0 0 38px;height:38px;border-radius:50%;background:#eaf0ff;color:var(--blue);font-weight:850}.timeline-content{flex:1;padding:20px;border:1px solid var(--line);border-radius:16px;background:#fff}.green-tag{display:inline-block;border-radius:99px;background:#e7f8ef;color:#287d58;padding:5px 9px;font-size:.75rem;font-weight:800}.timeline-content h3{font-size:1rem;line-height:1.6}.timeline-content small{color:var(--muted)}
+    .text-comparison,.brief-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.legend{display:flex;gap:12px;flex-wrap:wrap;margin-top:18px;color:var(--muted);font-size:.85rem}.textcompare-actions{margin-top:22px}
+    .brief-box{width:min(900px,calc(100% - 40px));margin:0 auto 25px}.brief-box textarea{min-height:210px;margin-bottom:15px}.brief-result{width:min(900px,calc(100% - 40px));margin:0 auto 60px;padding:24px;background:#f4f7ff;border-radius:20px}.brief-grid>div{background:#fff;padding:18px;border-radius:14px;border:1px solid var(--line)}
+    .feature-demo-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:20px 0}.demo-tile{padding:18px;border:1px solid var(--line);border-radius:16px;background:#fff}.demo-tile strong{display:block;margin-bottom:7px}.demo-tile p{color:var(--muted);line-height:1.6;margin:0;font-size:.9rem}
+    .tool-form{display:grid;gap:16px}.tool-form .tt-grid-2{gap:16px}.tool-result{margin-top:20px;padding:20px;border:1px dashed #cbd5ed;border-radius:16px;background:#f8faff;color:#66738a;line-height:1.7}
+    .about-page{width:min(1180px,calc(100% - 40px));margin:auto;padding:36px 0 65px}
+    .about-hero{display:grid;grid-template-columns:1fr 1fr;gap:42px;align-items:center;padding:18px 0 60px}
+    .about-hero h1{font-size:clamp(2.5rem,5vw,4.3rem);line-height:1.05;letter-spacing:-.05em;margin:18px 0}.about-hero h1 span{color:var(--blue)}
+    .about-hero p{font-size:1.02rem;line-height:1.85;color:var(--muted)}
+    .about-art{border-radius:28px;overflow:hidden;background:linear-gradient(135deg,#eaf0ff,#f4edff 55%,#e7f8f0);padding:20px;border:1px solid #e2e8f6}
+    .about-art svg{width:100%;height:auto;display:block}
+    .about-image-caption{margin-top:12px;padding:13px 15px;border-radius:13px;background:#ffffffd9;color:#53627b;font-size:.85rem}
+    .about-section-heading{text-align:center;max-width:750px;margin:10px auto 28px}.about-section-heading h2{font-size:clamp(1.8rem,3.5vw,2.7rem);letter-spacing:-.04em;margin:12px 0}.about-section-heading p{color:var(--muted);line-height:1.7}
+    .about-story-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;margin:25px 0 70px}
+    .about-story-card{border:1px solid var(--line);border-radius:20px;overflow:hidden;background:#fff}.about-story-art{height:155px;display:grid;place-items:center;background:linear-gradient(135deg,#edf2ff,#f8f5ff)}.about-story-card:nth-child(2) .about-story-art{background:linear-gradient(135deg,#fff1e9,#fff8ef)}.about-story-card:nth-child(3) .about-story-art{background:linear-gradient(135deg,#e8f8f1,#f2fbf7)}.about-story-art svg{width:110px;height:110px}.about-story-body{padding:22px}.story-step{font-size:.72rem;letter-spacing:.1em;font-weight:850;color:var(--blue)}.about-story-body h3{margin:11px 0 8px}.about-story-body p{color:var(--muted);line-height:1.7;margin:0}
+    .about-method{display:grid;grid-template-columns:1fr 1fr;gap:38px;align-items:center;padding:clamp(22px,4vw,42px);border-radius:26px;background:linear-gradient(135deg,#f2f5ff,#faf7ff);border:1px solid #e4e9fa}.about-method h2{font-size:clamp(1.7rem,3vw,2.4rem);line-height:1.2;letter-spacing:-.03em}.about-method p{color:var(--muted);line-height:1.8}.about-check-list{list-style:none;padding:0;margin:22px 0 0;display:grid;gap:16px}.about-check-list li{display:flex;gap:12px}.about-check-list li>span{flex:0 0 28px;height:28px;display:grid;place-items:center;border-radius:50%;background:#e2eaff;color:#3658c4;font-weight:900}.about-check-list strong,.about-check-list small{display:block}.about-check-list small{margin-top:4px;color:var(--muted);line-height:1.5}
+    .method-mini-card{padding:19px;border-radius:15px;border:1px solid var(--line);background:#fff}.method-mini-card>span{font-size:.7rem;letter-spacing:.1em;font-weight:850;color:#74819a}.method-mini-card p{font-size:1.03rem;color:var(--ink);margin:12px 0}.method-mini-card em{font-style:normal;background:#d9f5e5;padding:2px 4px;border-radius:4px}.method-mini-card strong{color:#b74f37;background:#ffe1d8;padding:2px 4px;border-radius:4px}.method-connector{text-align:center;padding:12px;color:#8995ad}.method-connector span{font-size:.75rem;margin-left:7px}.method-caption{text-align:center!important;font-size:.75rem!important;margin-bottom:0}
+    .principles{padding:68px 0 52px}.principle-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}.principle-card{padding:23px;border:1px solid var(--line);border-radius:18px;background:#fff}.principle-icon{display:grid;place-items:center;width:42px;height:42px;border-radius:13px;background:#edf2ff;color:var(--blue);font-size:1.4rem}.principle-card h3{margin:16px 0 8px}.principle-card p{color:var(--muted);line-height:1.7;margin:0}
+    .about-tech{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:center;padding:25px 0}.about-tech h2{font-size:clamp(1.7rem,3vw,2.4rem);letter-spacing:-.03em}.about-tech p{color:var(--muted);line-height:1.8}.tech-tags{display:flex;gap:9px;flex-wrap:wrap}.tech-tags span{border:1px solid var(--line);background:#fff;border-radius:99px;padding:8px 11px;color:#526078;font-size:.82rem}
+    .about-disclaimer{border-left:4px solid #8397e9;background:#f3f6ff;padding:18px 21px;border-radius:0 14px 14px 0;margin-top:22px}.about-disclaimer p{color:var(--muted);line-height:1.7;margin:7px 0 0}
+    footer{padding:24px 20px;text-align:center;border-top:1px solid var(--line);color:#7b879a;font-size:.88rem}
+    @media(max-width:900px){.navbar{flex-wrap:wrap}.navbar nav{order:3;width:100%;justify-content:flex-start;overflow-x:auto;flex-wrap:nowrap}.navbar nav a{white-space:nowrap}.tt-hero,.about-hero,.about-method,.about-tech{grid-template-columns:1fr}.tt-hero{padding-top:45px}.tt-hero-art{min-height:330px}.about-story-grid{grid-template-columns:1fr 1fr}.principle-grid{grid-template-columns:1fr 1fr}}
+    @media(max-width:620px){.tt-wrap,.about-page{width:min(100% - 28px,1180px)}.navbar{padding:12px 14px;gap:12px}.get-started{padding:10px 12px}.tt-hero{padding:38px 0 35px}.tt-hero h1{font-size:2.65rem}.tt-hero-art{min-height:290px;padding:16px}.art-float.one{left:5px;top:24px}.art-float.two{right:5px;bottom:20px}.tt-feature-grid,.tt-grid-2,.ocr-grid,.text-comparison,.brief-grid,.feature-demo-grid{grid-template-columns:1fr}.tt-feature-card{padding:21px}.tt-feature-section{padding-bottom:48px}.news-search-form{flex-direction:column}.result-grid{grid-template-columns:1fr}.about-page{padding-top:20px}.about-hero{gap:25px}.about-story-grid,.principle-grid{grid-template-columns:1fr}.about-story-art{height:140px}.about-method{padding:20px}.tt-panel{width:calc(100% - 28px);padding:16px}.page-heading{padding:38px 15px 22px}.ocr-grid,.ocr-notice,.ocr-next,.news-explorer,.timeline,.timeline-history-heading,.brief-box,.brief-result{width:calc(100% - 28px)}}
+  </style>
+</head>
+<body>
+<header class="navbar">
+  <div class="logo"><div class="logo-icon">⌕</div><span>AI TruthTrail</span></div>
+  <nav aria-label="Main navigation">
+    <a href="#home" onclick="showPage('home');return false;">Home</a>
+    <a href="#compare" onclick="showPage('compare');return false;">Compare</a>
+    <a href="#ocr" onclick="showPage('ocr');return false;">Screenshot OCR</a>
+    <a href="#timeline" onclick="showPage('timeline');return false;">Timeline</a>
+    <a href="#truthbrief" onclick="showPage('truthbrief');return false;">TruthBrief</a>
+    <a href="#about" onclick="showPage('about');return false;">About</a>
+  </nav>
+  <button class="get-started" onclick="showPage('compare')">Get Started <span aria-hidden="true">→</span></button>
+</header>
+
+<!-- HOME -->
+<section id="home" class="page active">
+  <div class="tt-wrap">
+    <div class="tt-hero">
+      <div>
+        <span class="eyebrow">A closer look at changing information</span>
+        <h1>Follow the story <span>behind a claim.</span></h1>
+        <p>Information can change as it travels. TruthTrail helps you examine shifts in wording, missing context, certainty, and meaning—so you can ask better questions before sharing.</p>
+        <div class="hero-buttons">
+          <button class="primary-btn" onclick="showPage('compare')">Get started with a claim →</button>
+          <button class="secondary-btn" onclick="document.getElementById('new-features').scrollIntoView({behavior:'smooth'})">Explore features ↓</button>
+        </div>
+      </div>
+      <div class="tt-hero-art" aria-label="Illustration of information being compared">
+        <div class="art-orb"></div><div class="art-orb two"></div>
+        <div class="art-document">
+          <div class="art-document-top"><span>TRUTHTRAIL / CLAIM PATH</span><span>●</span></div>
+          <h3>One claim. Different versions.</h3>
+          <div class="art-line"></div><div class="art-line mid"></div><div class="art-line short"></div>
+          <div class="art-highlight"></div>
+          <div class="art-line mid"></div><div class="art-line short"></div>
+        </div>
+        <div class="art-float one"><strong>Original wording</strong><small>“Studies suggest it may…”</small></div>
+        <div class="art-float two"><strong>Meaning shift detected</strong><small>More certain wording</small></div>
+      </div>
+    </div>
+
+    <section id="new-features" class="tt-feature-section">
+      <div class="section-intro">
+        <span class="eyebrow">Go beyond a similarity score</span>
+        <h2>Explore the next layer of TruthTrail</h2>
+        <p>Four focused tools designed to show how a claim is built, what context it may lose, and how meaning can drift between versions or languages.</p>
+      </div>
+      <div class="tt-feature-grid">
+        <button class="tt-feature-card" onclick="showPage('claimdna')">
+          <span class="tt-feature-icon">⌘</span>
+          <h3>Claim DNA</h3>
+          <p>Break a statement into its key parts—who, what, where, when, numbers, negation, and certainty—to see which details change.</p>
+          <span class="tt-feature-foot"><span>Explore Claim DNA</span><span>↗</span></span>
+        </button>
+        <button class="tt-feature-card" onclick="showPage('context')">
+          <span class="tt-feature-icon">◉</span>
+          <h3>Missing Context Detector</h3>
+          <p>Look for qualifiers and limitations such as “may,” “early research,” or “in a small study” that can disappear from later versions.</p>
+          <span class="tt-feature-foot"><span>Inspect context loss</span><span>↗</span></span>
+        </button>
+        <button class="tt-feature-card" onclick="showPage('evidence')">
+          <span class="tt-feature-icon">⌁</span>
+          <h3>Evidence Trail</h3>
+          <p>Keep source links, quoted passages, and notes together so readers can trace a claim back to material they can inspect.</p>
+          <span class="tt-feature-foot"><span>Explore source trail</span><span>↗</span></span>
+        </button>
+        <button class="tt-feature-card" onclick="showPage('translate')">
+          <span class="tt-feature-icon">文</span>
+          <h3>English ↔ Hindi & Translation Drift</h3>
+          <p>Plan for bilingual reading: translate a news passage and compare whether its certainty, qualifiers, or meaning shift across languages.</p>
+          <span class="tt-feature-foot"><span>Explore bilingual analysis</span><span>↗</span></span>
+        </button>
+      </div>
+    </section>
+
+    <section class="tt-existing-tools">
+      <div class="section-intro">
+        <span class="eyebrow">Core prototype tools</span>
+        <h2>Start with what already works</h2>
+        <p>These existing tools remain available from the navigation and Get Started button.</p>
+      </div>
+      <div class="tool-links">
+        <button onclick="showPage('compare')">⇄ Compare Claims</button>
+        <button onclick="showPage('ocr')">▧ Screenshot OCR</button>
+        <button onclick="showPage('timeline')">↕ Claim Timeline</button>
+        <button onclick="showPage('truthbrief')">▤ TruthBrief</button>
+      </div>
+    </section>
+  </div>
+</section>
+
+<!-- EXISTING COMPARE CLAIMS -->
+<section id="compare" class="page">
+  <div class="page-heading"><span class="badge">Core tool · Claim analysis</span><h1>Compare Claims</h1><p>Compare two versions of a statement to explore changes in wording and meaning.</p></div>
+  <div class="tt-panel">
+    <div class="tt-grid-2 claim-grid">
+      <div class="claim-box"><label for="originalClaim">Original Claim</label><textarea id="originalClaim" placeholder="Paste the original statement or use text extracted from a screenshot...">Early studies suggest that green tea may reduce certain cardiovascular risk factors.</textarea></div>
+      <div class="claim-box"><label for="laterClaim">Later Claim</label><textarea id="laterClaim" placeholder="Paste the later statement or use text extracted from another screenshot...">Green tea reduces heart disease.</textarea></div>
+    </div>
+    <p class="form-help">You can type claims, paste text, or extract text from screenshots first.</p>
+    <button class="primary-btn analyze-btn" onclick="analyzeClaim()">Analyze Claim</button>
+    <div id="analysisResult" class="analysis hidden">
+      <h2>Analysis Results</h2>
+      <div class="result-grid">
+        <div class="similarity"><div class="circle"><span id="percentage">—</span></div><h3>Semantic Similarity</h3><p>Awaiting analysis</p></div>
+        <div class="changes"><h3>Detected Changes</h3></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- EXISTING SCREENSHOT OCR -->
+<section id="ocr" class="page">
+  <div class="page-heading"><span class="badge">Core tool · Image text extraction</span><h1>Screenshot OCR Analyzer</h1><p>Upload two screenshots, extract their text, review the result, and send the statements to Compare Claims.</p></div>
+  <div class="ocr-notice"><strong>How it works:</strong> Choose an image, extract its text, correct any mistakes, and use the extracted text as an original or later claim. OCR does not verify whether the text is true.</div>
+  <div class="ocr-grid">
+    <div class="ocr-card"><h2>Screenshot 1</h2><p class="form-help">Use this as the original claim.</p><label for="originalScreenshot">Choose first screenshot</label><input id="originalScreenshot" type="file" accept="image/png,image/jpeg,image/webp,image/bmp,image/gif"><img id="originalPreview" class="ocr-preview hidden" alt="Preview of the first uploaded screenshot"><button id="originalOcrButton" class="primary-btn ocr-button" onclick="extractScreenshotText('original')">Extract Text</button><p id="originalOcrStatus" class="ocr-status" role="status" aria-live="polite"></p><label for="originalOcrText">Extracted Text (editable)</label><textarea id="originalOcrText" class="ocr-text" placeholder="The extracted text will appear here..."></textarea><button class="secondary-btn ocr-button" onclick="useOcrText('original')">Use as Original Claim →</button></div>
+    <div class="ocr-card"><h2>Screenshot 2</h2><p class="form-help">Use this as the later claim.</p><label for="laterScreenshot">Choose second screenshot</label><input id="laterScreenshot" type="file" accept="image/png,image/jpeg,image/webp,image/bmp,image/gif"><img id="laterPreview" class="ocr-preview hidden" alt="Preview of the second uploaded screenshot"><button id="laterOcrButton" class="primary-btn ocr-button" onclick="extractScreenshotText('later')">Extract Text</button><p id="laterOcrStatus" class="ocr-status" role="status" aria-live="polite"></p><label for="laterOcrText">Extracted Text (editable)</label><textarea id="laterOcrText" class="ocr-text" placeholder="The extracted text will appear here..."></textarea><button class="secondary-btn ocr-button" onclick="useOcrText('later')">Use as Later Claim →</button></div>
+  </div>
+  <div class="ocr-next"><h2>Ready to compare?</h2><p>Extract text from both screenshots, review it, then compare the claims.</p><button class="primary-btn" onclick="useBothOcrTexts()">Compare Both Screenshots →</button></div>
+</section>
+
+<!-- EXISTING TIMELINE -->
+<section id="timeline" class="page">
+  <div class="page-heading"><span class="badge">Core tool · History</span><h1>Claim Evolution Timeline</h1><p>Review saved comparisons and explore how a claim changes across versions.</p></div>
+  <div class="news-explorer"><h2>Explore News Across Sources</h2><p>Search for a topic and select reports to compare.</p><form id="newsSearchForm" class="news-search-form"><input id="newsSearchInput" type="search" placeholder="Try: climate change, space mission..." maxlength="200" required><button type="submit" class="primary-btn" id="newsSearchButton">Search News</button></form><p id="newsSearchStatus" role="status" aria-live="polite"></p><div id="newsResults" class="news-results"></div></div>
+  <div class="timeline-history-heading"><h2>Your Claim Comparison History</h2><p>Successful comparisons will appear here in this browser.</p></div>
+  <div class="timeline"><div class="timeline-item"><div class="number">1</div><div class="timeline-content"><span class="green-tag">Example</span><h3>Early studies suggest that green tea may reduce certain cardiovascular risk factors.</h3><small>Illustrative sample claim — not live news</small></div></div></div>
+</section>
+
+<!-- EXISTING TEXT COMPARISON -->
+<section id="textcompare" class="page">
+  <div class="page-heading"><span class="badge">Text analysis</span><h1>Highlight Text Differences</h1><p>Review wording that appears in one claim but not the other.</p></div>
+  <div class="tt-panel"><div class="text-comparison"><div class="text-card"><h3>Original Claim</h3><p>Run a claim comparison to display the original text here.</p></div><div class="text-card"><h3>Later Claim</h3><p>Run a claim comparison to display the later text here.</p></div></div><div class="legend"><span class="legend-red">Words only in original</span><span class="legend-green">Words only in later claim</span></div><div class="textcompare-actions"><button class="secondary-btn" onclick="showPage('compare')">Compare Another Pair →</button></div></div>
+</section>
+
+<!-- EXISTING TRUTHBRIEF -->
+<section id="truthbrief" class="page">
+  <div class="page-heading"><span class="badge">Core tool · News summary</span><h1>TruthBrief</h1><p>Turn a long article into a concise extractive brief. The summary uses text you provide.</p></div>
+  <div class="brief-box"><label for="newsText">Paste news article</label><textarea id="newsText" placeholder="Paste the article text here..."></textarea><button class="primary-btn" onclick="generateBrief()">Generate Brief</button></div>
+  <div id="briefResult" class="brief-result hidden"><h2>Generated News Brief</h2><div class="brief-grid"><div><h3>Key Sentences</h3><ul></ul></div><div><h3>Quick Extractive Summary</h3><p></p></div></div></div>
+</section>
+
+<!-- NEW FEATURE PREVIEW: CLAIM DNA -->
+<!-- CLAIM DNA -->
+<section id="claimdna" class="page">
+
+  <div class="page-heading">
+    <span class="badge">Feature 01</span>
+    <h1>Claim DNA</h1>
+    <p>Break a claim into the details that shape its meaning—not just the overall similarity.</p>
+  </div>
+
+  <div class="tt-panel">
+
+    <div class="notice">
+      Compare two versions of a claim to review changes in meaning,
+      numbers, negation, and certainty.
+    </div>
+
+    <div class="tt-grid-2">
+
+      <div class="claim-box">
+        <label for="dnaClaimA">Original claim</label>
+        <textarea id="dnaClaimA" rows="5">A small early study suggests the treatment may reduce symptoms in adults.</textarea>
+      </div>
+
+      <div class="claim-box">
+        <label for="dnaClaimB">Later claim</label>
+        <textarea id="dnaClaimB" rows="5">The treatment reduces symptoms.</textarea>
+      </div>
+
+    </div>
+
+    <div class="feature-demo-grid">
+
+      <div class="demo-tile">
+        <strong>WHO / WHOSE</strong>
+        <p>People, groups, or populations described.</p>
+      </div>
+
+      <div class="demo-tile">
+        <strong>WHAT / ACTION</strong>
+        <p>Main event, action, or relationship.</p>
+      </div>
+
+      <div class="demo-tile">
+        <strong>WHEN / WHERE</strong>
+        <p>Time, place, and setting.</p>
+      </div>
+
+      <div class="demo-tile">
+        <strong>NUMBERS</strong>
+        <p>Amounts, percentages, and quantities.</p>
+      </div>
+
+      <div class="demo-tile">
+        <strong>NEGATION</strong>
+        <p>Words such as not, never, or no.</p>
+      </div>
+
+      <div class="demo-tile">
+        <strong>CERTAINTY</strong>
+        <p>Words such as may, suggests, or proves.</p>
+      </div>
+
+    </div>
+
+    <div class="tool-result">
+      This preview explains the elements that can change when a claim is repeated.
+      Automatic Claim DNA extraction is not connected yet.
+    </div>
+
+    <button type="button" class="secondary-btn"
+      onclick="showPage('compare')">
+      Open Compare Claims →
+    </button>
+
+  </div>
+
+</section>
+
+<!-- NEW FEATURE PREVIEW: CONTEXT -->
+<!-- MISSING CONTEXT DETECTOR -->
+<section id="context" class="page">
+
+  <div class="page-heading">
+    <span class="badge">Feature 02</span>
+
+    <h1>Missing Context Detector</h1>
+
+    <p>
+      Identify important qualifiers, limitations, and conditions
+      that may disappear when a claim is repeated.
+    </p>
+  </div>
+
+  <div class="tt-panel">
+
+    <div class="notice">
+      Compare the original passage with the later version.
+      Review whether uncertainty, study limitations, and conditions
+      are preserved.
+    </div>
+
+    <div class="tt-grid-2">
+
+      <div class="claim-box">
+        <label for="contextOriginal">Original passage</label>
+
+        <textarea
+          id="contextOriginal"
+          rows="7"
+          placeholder="Paste the original passage here..."
+        >Early research suggests the treatment may help some adults in a small study.</textarea>
+      </div>
+
+      <div class="claim-box">
+        <label for="contextLater">Later version</label>
+
+        <textarea
+          id="contextLater"
+          rows="7"
+          placeholder="Paste the later version here..."
+        >The treatment helps adults.</textarea>
+      </div>
+
+    </div>
+
+    <div class="feature-demo-grid">
+
+      <div class="demo-tile">
+        <strong>Certainty Words</strong>
+        <p>May, might, suggests, preliminary.</p>
+      </div>
+
+      <div class="demo-tile">
+        <strong>Scope Limitations</strong>
+        <p>Some people, a small study, this sample.</p>
+      </div>
+
+      <div class="demo-tile">
+        <strong>Conditions</strong>
+        <p>Only when, under specific conditions, in a trial.</p>
+      </div>
+
+    </div>
+
+    <div class="tool-result">
+      <strong>What to review</strong>
+
+      <p>
+        Check whether the later version removes uncertainty,
+        narrows or broadens the population, or omits important
+        study limitations.
+      </p>
+    </div>
+
+    <p class="form-help">
+      This interface is a preview. Automatic context detection
+      has not been connected yet.
+    </p>
+
+  </div>
+
+</section>
+
+<!-- NEW FEATURE PREVIEW: EVIDENCE TRAIL -->
+<!-- EVIDENCE TRAIL -->
+<section id="evidence" class="page">
+
+  <div class="page-heading">
+    <span class="badge">Feature 03</span>
+
+    <h1>Evidence Trail</h1>
+
+    <p>
+      Connect a claim with its source and supporting evidence
+      to create a transparent, reviewable record.
+    </p>
+  </div>
+
+  <div class="tt-panel">
+
+    <div class="notice">
+      Use genuine sources and passages that you have checked.
+      AI TruthTrail does not automatically verify a source's credibility.
+    </div>
+
+    <div class="tool-form">
+
+      <!-- CLAIM -->
+      <div class="claim-box">
+        <label for="evidenceClaim">Claim Being Checked</label>
+
+        <textarea
+          id="evidenceClaim"
+          rows="4"
+          placeholder="Enter the claim you want to investigate..."
+        ></textarea>
+      </div>
+
+      <!-- SOURCE DETAILS -->
+      <div class="tt-grid-2">
+
+        <div class="claim-box">
+          <label for="evidenceSource">Source Title / Publisher</label>
+
+          <input
+            id="evidenceSource"
+            type="text"
+            placeholder="Enter the article title or publisher"
+          >
+        </div>
+
+        <div class="claim-box">
+          <label for="evidenceUrl">Source URL</label>
+
+          <input
+            id="evidenceUrl"
+            type="url"
+            placeholder="https://example.com/article"
+          >
+        </div>
+
+      </div>
+
+      <!-- EVIDENCE -->
+      <div class="claim-box">
+        <label for="evidenceQuote">Supporting Passage</label>
+
+        <textarea
+          id="evidenceQuote"
+          rows="5"
+          placeholder="Paste the relevant passage from your source..."
+        ></textarea>
+      </div>
+
+      <!-- DATE -->
+      <div class="claim-box">
+        <label for="evidenceDate">Date Checked</label>
+
+        <input
+          id="evidenceDate"
+          type="date"
+        >
+      </div>
+
+      <!-- REVIEWER NOTES -->
+      <div class="claim-box">
+        <label for="evidenceNotes">Reviewer Notes</label>
+
+        <textarea
+          id="evidenceNotes"
+          rows="3"
+          placeholder="Explain how this passage supports or challenges the claim..."
+        ></textarea>
+      </div>
+
+      <!-- BUTTONS -->
+      <div class="hero-buttons">
+
+        <button
+          type="button"
+          class="primary-btn"
+          onclick="previewEvidenceRecord()"
+        >
+          Create Evidence Record →
+        </button>
+
+        <button
+          type="button"
+          class="secondary-btn"
+          onclick="clearEvidenceForm()"
+        >
+          Clear Form
+        </button>
+
+      </div>
+
+    </div>
+
+    <!-- OUTPUT -->
+    <div id="evidenceResult" class="tool-result hidden">
+
+      <h2>Evidence Record</h2>
+
+      <p>
+        <strong>Claim:</strong>
+        <span id="recordClaim"></span>
+      </p>
+
+      <p>
+        <strong>Source:</strong>
+        <span id="recordSource"></span>
+      </p>
+
+      <p>
+        <strong>Supporting Passage:</strong>
+        <span id="recordQuote"></span>
+      </p>
+
+      <p>
+        <strong>Date Checked:</strong>
+        <span id="recordDate"></span>
+      </p>
+
+      <p>
+        <strong>Reviewer Notes:</strong>
+        <span id="recordNotes"></span>
+      </p>
+
+      <p>
+        <strong>Source Link:</strong>
+        <a
+          id="recordUrl"
+          target="_blank"
+          rel="noopener noreferrer"
+        >Open Source</a>
+      </p>
+
+      <p class="form-help">
+        This record organizes the information you provide.
+        It does not independently establish whether the claim is true.
+      </p>
+
+    </div>
+
+  </div>
+
+</section>
+
+<!-- NEW FEATURE PREVIEW: TRANSLATION -->
+<!-- TRANSLATION DRIFT ANALYSIS -->
+<section id="translate" class="page">
+
+  <div class="page-heading">
+    <span class="badge">Bilingual Analysis</span>
+
+    <h1>English ↔ Hindi Translation Drift</h1>
+
+    <p>
+      Compare the original and translated versions of a news passage.
+      Inspect changes in meaning, certainty, context, and important details.
+    </p>
+  </div>
+
+  <div class="tt-panel">
+
+    <div class="notice">
+      Compare both versions of a passage to review possible differences
+      in wording, meaning, certainty, and key details.
+    </div>
+
+    <div class="tool-form">
+
+      <!-- ORIGINAL TEXT -->
+      <div class="claim-box">
+        <label for="translationOriginal">
+          Original News Passage
+        </label>
+
+        <textarea
+          id="translationOriginal"
+          rows="7"
+          placeholder="Paste the original English or Hindi news passage here..."
+        ></textarea>
+      </div>
+
+      <!-- TRANSLATION SETTINGS -->
+      <div class="tt-grid-2">
+
+        <div class="claim-box">
+          <label for="translationDirection">
+            Translation Direction
+          </label>
+
+          <select id="translationDirection">
+            <option value="en-hi">English → Hindi</option>
+            <option value="hi-en">Hindi → English</option>
+          </select>
+        </div>
+
+        <div class="claim-box">
+          <label for="translationFocus">
+            Analysis Focus
+          </label>
+
+          <select id="translationFocus">
+            <option value="meaning">Meaning and Key Details</option>
+            <option value="certainty">Certainty and Qualifiers</option>
+            <option value="facts">Numbers, Names and Dates</option>
+            <option value="context">Context and Limitations</option>
+          </select>
+        </div>
+
+      </div>
+
+      <!-- TRANSLATED TEXT -->
+      <div class="claim-box">
+        <label for="translationResult">
+          Translated News Passage
+        </label>
+
+        <textarea
+          id="translationResult"
+          rows="7"
+          placeholder="Paste the translated passage here..."
+        ></textarea>
+      </div>
+
+      <!-- ACTION BUTTONS -->
+      <div class="hero-buttons">
+
+        <button
+          type="button"
+          class="primary-btn"
+          onclick="compareTranslationVersions()"
+        >
+          Compare Translations →
+        </button>
+
+        <button
+          type="button"
+          class="secondary-btn"
+          onclick="clearTranslationForm()"
+        >
+          Clear Text
+        </button>
+
+      </div>
+
+    </div>
+
+    <!-- ANALYSIS RESULTS -->
+    <div id="translationAnalysis" class="analysis hidden">
+
+      <h2>Translation Analysis</h2>
+
+      <p id="translationStatus" role="status" aria-live="polite"></p>
+
+      <div class="tt-grid-2">
+
+        <div class="text-card">
+          <h3>Original Version</h3>
+          <p id="translationOriginalOutput"></p>
+        </div>
+
+        <div class="text-card">
+          <h3>Translated Version</h3>
+          <p id="translationResultOutput"></p>
+        </div>
+
+      </div>
+
+      <div class="tool-result">
+        <h3>Review Checklist</h3>
+
+        <ul>
+          <li>Check whether uncertainty words are preserved.</li>
+          <li>Verify names, numbers, percentages and dates.</li>
+          <li>Check whether limitations or conditions are missing.</li>
+          <li>Review the original source before drawing conclusions.</li>
+        </ul>
+      </div>
+
+      <p class="form-help">
+        This checklist does not prove that a translation is correct or incorrect.
+        The passages must be reviewed carefully.
+      </p>
+
+    </div>
+
+  </div>
+
+</section>
+
+<!-- ABOUT: ALL ART IS INLINE SVG, SO IT DOES NOT DEPEND ON REMOTE IMAGE URLS -->
+<section id="about" class="page">
+  <div class="about-page">
+    <div class="about-hero">
+      <div>
+        <span class="badge">About AI TruthTrail</span>
+        <h1>Information deserves its <span>full context.</span></h1>
+        <p>AI TruthTrail is a prototype for exploring how information changes as it is repeated. It focuses on wording, context, certainty, and the path a claim takes between versions—not on presenting an unexplained true-or-false label.</p>
+        <div class="hero-buttons"><button class="primary-btn" onclick="showPage('compare')">Try Compare Claims →</button><button class="secondary-btn" onclick="showPage('claimdna')">Explore Claim DNA →</button></div>
+      </div>
+      <div class="about-art">
+        <svg viewBox="0 0 520 360" role="img" aria-label="Offline vector illustration of two documents being compared">
+          <circle cx="420" cy="76" r="58" fill="#dce5ff"/><circle cx="84" cy="285" r="54" fill="#d9f4e8"/>
+          <rect x="75" y="52" width="210" height="254" rx="18" fill="#fff" stroke="#d9e1f2" stroke-width="2" transform="rotate(-5 180 180)"/>
+          <rect x="245" y="72" width="205" height="245" rx="18" fill="#fff" stroke="#d9e1f2" stroke-width="2" transform="rotate(5 345 190)"/>
+          <g transform="rotate(-5 180 180)"><rect x="100" y="83" width="112" height="13" rx="6" fill="#dce5ff"/><rect x="100" y="119" width="160" height="8" rx="4" fill="#e8edf6"/><rect x="100" y="139" width="145" height="8" rx="4" fill="#e8edf6"/><rect x="100" y="159" width="155" height="8" rx="4" fill="#e8edf6"/><rect x="100" y="190" width="136" height="25" rx="6" fill="#d9f5e6"/><rect x="100" y="232" width="155" height="8" rx="4" fill="#e8edf6"/><rect x="100" y="252" width="110" height="8" rx="4" fill="#e8edf6"/></g>
+          <g transform="rotate(5 345 190)"><rect x="270" y="102" width="120" height="13" rx="6" fill="#e8ddff"/><rect x="270" y="139" width="150" height="8" rx="4" fill="#e8edf6"/><rect x="270" y="159" width="130" height="8" rx="4" fill="#e8edf6"/><rect x="270" y="179" width="155" height="8" rx="4" fill="#e8edf6"/><rect x="270" y="210" width="130" height="25" rx="6" fill="#ffe3d9"/><rect x="270" y="251" width="150" height="8" rx="4" fill="#e8edf6"/><rect x="270" y="271" width="98" height="8" rx="4" fill="#e8edf6"/></g>
+          <circle cx="260" cy="182" r="31" fill="#3567dc"/><path d="M246 182h28M260 168v28" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+        </svg>
+        <div class="about-image-caption"><strong>Follow the changes.</strong> Wording · Context · Certainty · Evidence</div>
+      </div>
+    </div>
+
+    <div class="about-section-heading"><span class="badge">Why it matters</span><h2>A claim can change while it travels.</h2><p>One small word can turn a cautious statement into a confident one. TruthTrail is designed to make those differences easier to inspect.</p></div>
+    <div class="about-story-grid">
+      <article class="about-story-card"><div class="about-story-art"><svg viewBox="0 0 120 120" aria-hidden="true"><rect x="27" y="15" width="67" height="88" rx="10" fill="#fff" stroke="#cbd7f5" stroke-width="2"/><path d="M40 38h39M40 49h39M40 60h28" stroke="#9aaee9" stroke-width="5" stroke-linecap="round"/><rect x="39" y="72" width="42" height="12" rx="4" fill="#d8f4e5"/></svg></div><div class="about-story-body"><span class="story-step">01 · ORIGINAL</span><h3>Keep the first version</h3><p>Start with the source wording, including limitations and uncertainty.</p></div></article>
+      <article class="about-story-card"><div class="about-story-art"><svg viewBox="0 0 120 120" aria-hidden="true"><rect x="15" y="27" width="54" height="67" rx="8" fill="#fff" stroke="#e5c9b7" stroke-width="2"/><rect x="52" y="19" width="54" height="67" rx="8" fill="#fff" stroke="#e5c9b7" stroke-width="2"/><path d="M27 45h28M27 56h22M64 38h28M64 49h28" stroke="#e4a27e" stroke-width="4" stroke-linecap="round"/><path d="M44 100h35" stroke="#bd663d" stroke-width="5" stroke-linecap="round"/></svg></div><div class="about-story-body"><span class="story-step">02 · COMPARE</span><h3>Spot the shift</h3><p>Review changes in wording, certainty, scope, and possible context loss.</p></div></article>
+      <article class="about-story-card"><div class="about-story-art"><svg viewBox="0 0 120 120" aria-hidden="true"><circle cx="51" cy="49" r="27" fill="#fff" stroke="#9ed9bd" stroke-width="7"/><path d="M71 69l23 23" stroke="#27845e" stroke-width="10" stroke-linecap="round"/><path d="M39 49l8 8 16-18" fill="none" stroke="#27845e" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div class="about-story-body"><span class="story-step">03 · REVIEW</span><h3>Check the evidence</h3><p>Use the results as a guide, then inspect reliable sources before drawing conclusions.</p></div></article>
+    </div>
+
+    <div class="about-method">
+      <div><span class="badge">How it works</span><h2>Make the differences visible.</h2><p>The current prototype combines sentence similarity with text-level checks. Screenshot OCR can extract words from images so the text can be reviewed and compared.</p>
+        <ul class="about-check-list"><li><span>✓</span><div><strong>Compare claims</strong><small>Review two versions of a statement side by side.</small></div></li><li><span>✓</span><div><strong>Extract screenshot text</strong><small>Run OCR, then correct recognition errors.</small></div></li><li><span>✓</span><div><strong>Review saved comparisons</strong><small>Return to comparison history in this browser.</small></div></li><li><span>✓</span><div><strong>Explore planned analysis tools</strong><small>Claim DNA, context loss, evidence trails, and translation drift are the next design directions.</small></div></li></ul>
+      </div>
+      <div><div class="method-mini-card"><span>ORIGINAL CLAIM</span><p>Early studies suggest this <em>may</em> help.</p><small>Qualified statement</small></div><div class="method-connector">↓ <span>wording becomes stronger</span> ↓</div><div class="method-mini-card"><span>LATER VERSION</span><p>This <strong>will</strong> solve the problem.</p><small>Stronger wording</small></div><p class="method-caption">Illustrative example only—not a real-world fact check.</p></div>
+    </div>
+
+    <div class="principles"><div class="about-section-heading"><span class="badge">Project principles</span><h2>Clear, careful, and transparent.</h2></div><div class="principle-grid"><div class="principle-card"><span class="principle-icon">◎</span><h3>Show the change</h3><p>Make wording differences visible instead of hiding them behind one score.</p></div><div class="principle-card"><span class="principle-icon">⌕</span><h3>Context matters</h3><p>Notice when qualifications or important details may have disappeared.</p></div><div class="principle-card"><span class="principle-icon">↗</span><h3>Human review</h3><p>Encourage readers to inspect the original sources and supporting evidence.</p></div></div></div>
+    
+</section>
+
+<footer><p>© 2026 AI TruthTrail · Information Tracking Platform</p></footer>
+<script src="script.js"></script>
+</body>
+</html>
