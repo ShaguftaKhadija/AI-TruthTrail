@@ -4,3 +4,4 @@ python-dotenv
 sentence-transformers
 Pillow
 pytesseract
+gunicorn
